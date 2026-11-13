@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>วิเคราะห์เปรียบเทียบตลาดหุ้นทั่วโลก</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2733;--mute:#5d6b7a;--line:#dde3ea;--pri:#1f5fa8;--pri2:#174a85;--ok:#1d7a4f;--bad:#b3372f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Sarabun","Noto Sans Thai","Leelawadee UI","Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55}
+header{background:linear-gradient(120deg,#16375f,#1f5fa8);color:#fff;padding:22px 28px}
+header h1{margin:0 0 4px;font-size:24px}
+header p{margin:0;opacity:.88;font-size:14px}
+main{max-width:1500px;margin:0 auto;padding:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(20,40,70,.05)}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:15px;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+label.f{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+select,input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}
+button{font:inherit;border:0;border-radius:7px;padding:9px 18px;cursor:pointer;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+.b-pri{background:var(--pri);color:#fff}.b-pri:hover:not(:disabled){background:var(--pri2)}
+.b-ok{background:var(--ok);color:#fff}
+.b-sec{background:#e7edf5;color:var(--pri2)}
+.b-bad{background:#fbe9e7;color:var(--bad)}
+.b-sm{padding:5px 11px;font-size:13px;font-weight:500}
+/* dropdown */
+.dd{position:relative;min-width:340px;flex:1;max-width:560px}
+.dd-btn{width:100%;text-align:left;background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:400;display:flex;justify-content:space-between;gap:8px}
+.dd-panel{display:none;position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(20,40,70,.18);max-height:440px;overflow:auto;padding:10px}
+.dd.open .dd-panel{display:block}
+.dd-panel input[type=text]{width:100%;margin-bottom:8px}
+.grp{margin-bottom:8px}
+.grp-h{display:flex;align-items:center;gap:8px;font-weight:700;background:#eef3f9;padding:5px 8px;border-radius:6px;cursor:pointer}
+.grp-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:2px 8px;padding:6px 8px}
+.grp-items label{display:flex;gap:6px;align-items:center;cursor:pointer;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{background:#e7edf5;color:var(--pri2);border-radius:14px;padding:2px 10px;font-size:13px}
+.chip b{cursor:pointer;margin-left:6px}
+#status{margin-top:12px;font-size:14px;color:var(--mute);white-space:pre-line}
+#status.err{color:var(--bad)}#status.ok{color:var(--ok)}
+.bar{height:6px;background:#e7edf5;border-radius:3px;overflow:hidden;margin-top:8px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--pri);transition:width .3s}
+/* tables */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:620px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;white-space:nowrap}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right}
+th{background:#eef3f9;position:sticky;top:0;z-index:2;font-weight:700;cursor:pointer}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1}
+th:first-child{z-index:3;background:#eef3f9}
+td.l,th.l{text-align:left}
+tr:hover td{background:#f8fafc}
+.best{color:var(--ok);font-weight:700}.neg{color:var(--bad)}
+.note{font-size:13.5px;color:var(--mute);margin-top:12px}
+.note ul{margin:6px 0;padding-left:20px}.note b{color:var(--ink)}
+.head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.head h2{margin:0}
+.warnbox{background:#fff7e0;border:1px solid #f0d58a;color:var(--warn);padding:9px 12px;border-radius:7px;font-size:13.5px;margin-bottom:12px}
+/* charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:18px}
+.cc{border:1px solid var(--line);border-radius:9px;padding:14px;background:#fff}
+.cc-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.cc-tools{display:flex;gap:10px;align-items:center;font-size:13px}
+.cc-tools label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.cc-box{position:relative;height:380px}
+.cc p{font-size:12.5px;color:var(--mute);margin:8px 0 0}
+.hidden{display:none}
+@media(max-width:600px){.charts{grid-template-columns:1fr}.dd{min-width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 วิเคราะห์เปรียบเทียบตลาดหุ้นทั่วโลก</h1>
+  <p>ดึงข้อมูลออนไลน์แบบสด — Market Cap, P/E, P/BV, ROE, ROA, Dividend Yield และอัตราส่วนอื่น ๆ เพื่อเปรียบเทียบระหว่างตลาด</p>
+</header>
+<main>
+  <section class="card">
+    <h2>1) เลือกตลาดหุ้น</h2>
+    <div class="row">
+      <div class="dd" id="dd">
+        <label class="f">ตลาดหุ้น (เลือกได้หลายตลาด แบ่งตามทวีป)</label>
+        <button type="button" class="dd-btn" id="ddBtn"><span id="ddLabel">— คลิกเพื่อเลือกตลาด —</span><span>▾</span></button>
+        <div class="dd-panel" id="ddPanel">
+          <input type="text" id="ddSearch" placeholder="ค้นหาตลาด / ประเทศ...">
+          <div id="ddGroups"></div>
+        </div>
+      </div>
+      <div>
+        <label class="f">จำนวนหุ้นที่ใช้วิเคราะห์ต่อตลาด</label>
+        <select id="topN">
+          <option value="50">50 อันดับแรก (ตาม Market Cap)</option>
+          <option value="100" selected>100 อันดับแรก</option>
+          <option value="200">200 อันดับแรก</option>
+          <option value="500">500 อันดับแรก</option>
+        </select>
+      </div>
+      <button class="b-pri" id="btnRun">▶ ประมวลผล</button>
+      <button class="b-sec" id="btnCharts" disabled>📈 แสดงกราฟ</button>
+      <button class="b-bad" id="btnReset">↺ Reset</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="bar" id="bar"><i></i></div>
+    <div id="status"></div>
+  </section>
+
+  <section class="card hidden" id="secSummary">
+    <div class="head">
+      <h2>2) ตารางเปรียบเทียบภาพรวมตลาด</h2>
+      <button class="b-ok" id="btnXlsx">⬇ ดาวน์โหลดตารางทั้งหมด (Excel)</button>
+    </div>
+    <div id="fxNote"></div>
+    <div class="tw"><table id="tblSummary"></table></div>
+    <div class="note">
+      <b>คำอธิบายตาราง</b> (คลิกหัวคอลัมน์เพื่อเรียงลำดับ · ตัวเลขสีเขียวคือค่าที่โดดเด่นที่สุดในคอลัมน์นั้น)
+      <ul>
+        <li><b>Market Cap รวม</b> — มูลค่าหลักทรัพย์ตามราคาตลาดรวมของหุ้นที่นำมาวิเคราะห์ แปลงเป็นดอลลาร์สหรัฐ (พันล้าน USD) ใช้วัดขนาดตลาด</li>
+        <li><b>P/E (ถ่วงน้ำหนัก)</b> — Market Cap รวม ÷ กำไรสุทธิรวมโดยประมาณ (คำนวณแบบ harmonic เฉพาะบริษัทที่มีกำไร) ค่าต่ำแปลว่าราคาถูกเมื่อเทียบกำไร <b>P/E มัธยฐาน</b> คือค่ากลางของหุ้นรายตัว ไม่ถูกหุ้นใหญ่ครอบงำ</li>
+        <li><b>P/BV</b> — ราคาต่อมูลค่าทางบัญชี · <b>P/S</b> — ราคาต่อยอดขาย (ถ่วงน้ำหนักตาม Market Cap แบบ harmonic)</li>
+        <li><b>ROE</b> — กำไรสุทธิ ÷ ส่วนของผู้ถือหุ้น (%) วัดประสิทธิภาพการใช้เงินทุนของผู้ถือหุ้น · <b>ROA</b> — กำไรสุทธิ ÷ สินทรัพย์รวม (%) วัดประสิทธิภาพการใช้สินทรัพย์ ("ถ่วง" = เฉลี่ยถ่วงน้ำหนักตาม Market Cap)</li>
+        <li><b>Dividend Yield</b> — เงินปันผลต่อหุ้น ÷ ราคาหุ้น (%) ค่าถ่วงน้ำหนักนับหุ้นที่ไม่จ่ายปันผลเป็น 0 ส่วนมัธยฐานคิดเฉพาะหุ้นที่มีข้อมูลปันผล</li>
+        <li><b>D/E</b> — หนี้สินต่อทุน (เท่า) · <b>Net / Operating Margin</b> — อัตรากำไรสุทธิและกำไรจากการดำเนินงาน (%) · <b>ผลตอบแทน 1 ปี</b> — การเปลี่ยนแปลงราคาย้อนหลัง 1 ปี ถ่วงน้ำหนักตาม Market Cap</li>
+        <li><b>ข้อควรระวัง</b> — ค่าทั้งหมดคำนวณจากหุ้นขนาดใหญ่สุด N ตัวของแต่ละตลาด (ไม่ใช่ทุกตัว) ตลาดที่มีหุ้นน้อยกว่า N จะใช้ทั้งหมดที่มี หุ้นที่มีหลายชนิด (เช่น หุ้นสามัญ/บุริมสิทธิ) อาจถูกนับซ้ำ และมาตรฐานบัญชีต่างประเทศทำให้ตัวเลขเทียบกันได้โดยประมาณเท่านั้น ข้อมูลนี้ใช้เพื่อการศึกษา ไม่ใช่คำแนะนำการลงทุน</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card hidden" id="secWB">
+    <h2>3) ข้อมูลระดับตลาดจากธนาคารโลก (World Bank)</h2>
+    <div class="tw"><table id="tblWB"></table></div>
+    <div class="note">
+      <b>คำอธิบายตาราง</b> — สถิติทางการระดับประเทศจาก World Bank Open Data (ตัวเลขในวงเล็บคือปีล่าสุดที่มีข้อมูล ซึ่งอาจล้าหลัง 1–4 ปี และบางประเทศไม่มีรายงาน)
+      <ul>
+        <li><b>Market Cap บริษัทจดทะเบียน</b> — มูลค่าตลาดรวมของบริษัทจดทะเบียนในประเทศ (พันล้าน USD) · <b>% ของ GDP</b> — ขนาดตลาดหุ้นเทียบเศรษฐกิจ (Buffett Indicator)</li>
+        <li><b>จำนวนบริษัทจดทะเบียน</b> — เฉพาะบริษัทในประเทศ · <b>มูลค่าซื้อขาย % GDP</b> — สภาพคล่องเทียบขนาดเศรษฐกิจ · <b>Turnover Ratio</b> — มูลค่าซื้อขาย ÷ Market Cap (%) ยิ่งสูงยิ่งมีการหมุนเวียนซื้อขายมาก</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card hidden" id="secStocks">
+    <div class="head">
+      <h2>4) รายละเอียดหุ้นรายตัว</h2>
+      <div><label class="f" style="display:inline">แสดงตลาด: </label><select id="selStockMkt"></select></div>
+    </div>
+    <div class="tw"><table id="tblStocks"></table></div>
+    <div class="note"><b>คำอธิบายตาราง</b> — หุ้นทุกตัวที่ใช้คำนวณค่าของตลาดที่เลือก เรียงตาม Market Cap (ล้าน USD) คลิกหัวคอลัมน์เพื่อเรียงลำดับ ช่องที่เป็น "–" คือไม่มีข้อมูลจากแหล่งข้อมูล (เช่น P/E ของบริษัทที่ขาดทุน) ไฟล์ Excel จะรวมหุ้นของทุกตลาดที่เลือกไว้ในชีต "Stocks"</div>
+  </section>
+
+  <section class="card hidden" id="secCharts">
+    <h2>5) กราฟเปรียบเทียบ</h2>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="card">
+    <h2>แหล่งข้อมูลและการตั้งค่า</h2>
+    <div class="note" style="margin-top:0">
+      <ul>
+        <li>ข้อมูลหุ้นรายตัว (Market Cap, P/E, ROE, ROA, Dividend Yield ฯลฯ): TradingView Screener (<code>scanner.tradingview.com</code>) — ข้อมูลล่าสุด ณ เวลาที่กดประมวลผล</li>
+        <li>ข้อมูลระดับตลาด: World Bank Open Data API (<code>api.worldbank.org</code>) · อัตราแลกเปลี่ยน (ใช้เมื่อจำเป็น): <code>open.er-api.com</code></li>
+        <li>หากเบราว์เซอร์บล็อกการเชื่อมต่อข้ามโดเมน (CORS) ระบบจะลองผ่าน CORS proxy ด้านล่างโดยอัตโนมัติ สามารถเปลี่ยนเป็น proxy ของท่านเองได้</li>
+      </ul>
+      <label class="f">CORS proxy สำรอง (URL นำหน้า; ปลายทางจะถูกต่อท้ายแบบ encode)</label>
+      <input type="text" id="proxy" value="https://corsproxy.io/?url=" style="width:100%;max-width:520px">
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============================== ข้อมูลตลาด ============================== */
+const MARKETS = [
+  {g:'อเมริกาเหนือ', items:[['america','สหรัฐอเมริกา (NYSE/NASDAQ)','USA'],['canada','แคนาดา (TSX)','CAN'],['mexico','เม็กซิโก (BMV)','MEX']]},
+  {g:'อเมริกาใต้', items:[['brazil','บราซิล (B3)','BRA'],['argentina','อาร์เจนตินา (BYMA)','ARG'],['chile','ชิลี (BCS)','CHL'],['colombia','โคลอมเบีย (BVC)','COL'],['peru','เปรู (BVL)','PER']]},
+  {g:'ยุโรป', items:[['uk','สหราชอาณาจักร (LSE)','GBR'],['germany','เยอรมนี (XETRA)','DEU'],['france','ฝรั่งเศส (Euronext Paris)','FRA'],['switzerland','สวิตเซอร์แลนด์ (SIX)','CHE'],['netherlands','เนเธอร์แลนด์ (Euronext AMS)','NLD'],['spain','สเปน (BME)','ESP'],['italy','อิตาลี (Borsa Italiana)','ITA'],['sweden','สวีเดน (Nasdaq Stockholm)','SWE'],['norway','นอร์เวย์ (Oslo Børs)','NOR'],['denmark','เดนมาร์ก (Nasdaq CPH)','DNK'],['finland','ฟินแลนด์ (Nasdaq Helsinki)','FIN'],['belgium','เบลเยียม (Euronext BRU)','BEL'],['austria','ออสเตรีย (Wiener Börse)','AUT'],['poland','โปแลนด์ (GPW)','POL'],['portugal','โปรตุเกส (Euronext LIS)','PRT'],['greece','กรีซ (ATHEX)','GRC'],['turkey','ตุรกี (BIST)','TUR']]},
+  {g:'เอเชียตะวันออก', items:[['japan','ญี่ปุ่น (TSE)','JPN'],['china','จีน (SSE/SZSE)','CHN'],['hongkong','ฮ่องกง (HKEX)','HKG'],['korea','เกาหลีใต้ (KRX)','KOR'],['taiwan','ไต้หวัน (TWSE)',null]]},
+  {g:'เอเชียตะวันออกเฉียงใต้', items:[['thailand','ไทย (SET)','THA'],['singapore','สิงคโปร์ (SGX)','SGP'],['malaysia','มาเลเซีย (Bursa)','MYS'],['indonesia','อินโดนีเซีย (IDX)','IDN'],['vietnam','เวียดนาม (HOSE/HNX)','VNM'],['philippines','ฟิลิปปินส์ (PSE)','PHL']]},
+  {g:'เอเชียใต้', items:[['india','อินเดีย (NSE/BSE)','IND'],['pakistan','ปากีสถาน (PSX)','PAK'],['bangladesh','บังกลาเทศ (DSE)','BGD'],['srilanka','ศรีลังกา (CSE)','LKA']]},
+  {g:'ตะวันออกกลาง', items:[['ksa','ซาอุดีอาระเบีย (Tadawul)','SAU'],['uae','สหรัฐอาหรับเอมิเรตส์ (DFM/ADX)','ARE'],['qatar','กาตาร์ (QSE)','QAT'],['kuwait','คูเวต (Boursa Kuwait)','KWT'],['israel','อิสราเอล (TASE)','ISR']]},
+  {g:'แอฟริกา', items:[['rsa','แอฟริกาใต้ (JSE)','ZAF'],['egypt','อียิปต์ (EGX)','EGY'],['nigeria','ไนจีเรีย (NGX)','NGA'],['morocco','โมร็อกโก (Casablanca)','MAR'],['kenya','เคนยา (NSE)','KEN']]},
+  {g:'โอเชียเนีย', items:[['australia','ออสเตรเลีย (ASX)','AUS'],['newzealand','นิวซีแลนด์ (NZX)','NZL']]}
+];
+const MK = {}; MARKETS.forEach(g=>g.items.forEach(([id,name,iso])=>MK[id]={id,name,iso,group:g.g,short:name.replace(/\s*\(.*\)/,'')}));
+
+/* ฟิลด์ของ TradingView: แต่ละค่ามีชื่อสำรอง ถ้าเซิร์ฟเวอร์ไม่รู้จักชื่อแรกจะสลับไปชื่อถัดไปอัตโนมัติ */
+const FIELDS = {
+  sym:['name'], name:['description'], sector:['sector'], cur:['currency'], close:['close'],
+  mcap:['market_cap_basic'], pe:['price_earnings_ttm'], pb:['price_book_fq','price_book_ratio'],
+  ps:['price_sales_current','price_sales_ratio'], roe:['return_on_equity','return_on_equity_fq'],
+  roa:['return_on_assets','return_on_assets_fq'], dy:['dividend_yield_recent','dividends_yield_current','dividends_yield'],
+  de:['debt_to_equity','debt_to_equity_fq'], nm:['net_margin','after_tax_margin','net_margin_ttm'],
+  om:['operating_margin','operating_margin_ttm'], perf:['Perf.Y']
+};
+const WB_IND = [
+  ['CM.MKT.LCAP.CD','Market Cap บริษัทจดทะเบียน (พันล้าน USD)',v=>v/1e9,1],
+  ['CM.MKT.LCAP.GD.ZS','Market Cap (% ของ GDP)',v=>v,1],
+  ['CM.MKT.LDOM.NO','จำนวนบริษัทจดทะเบียน',v=>v,0],
+  ['CM.MKT.TRAD.GD.ZS','มูลค่าซื้อขาย (% ของ GDP)',v=>v,1],
+  ['CM.MKT.TRNR','Turnover Ratio (%)',v=>v,1]
+];
+const PALETTE = ['#1f5fa8','#d9822b','#2a9d8f','#b3372f','#7a5cc2','#5c8a1e','#c2578f','#3d7ea6','#8a6d3b','#56667a','#e0b030','#2f8f5b','#a34a28','#4b57b8','#888'];
+
+/* ============================== สถานะ ============================== */
+const S = {sel:new Set(), active:{}, usePC:true, usePrimary:true, transport:null, fx:null, results:[], wb:null, charts:{}, fxMode:''};
+function resetFieldState(){ S.active={}; Object.keys(FIELDS).forEach(k=>S.active[k]=0); S.usePC=true; S.usePrimary=true; }
+resetFieldState();
+const $ = id=>document.getElementById(id);
+
+/* ============================== Dropdown ============================== */
+function buildDropdown(){
+  const box=$('ddGroups'); box.innerHTML='';
+  MARKETS.forEach((g,gi)=>{
+    const d=document.createElement('div'); d.className='grp';
+    d.innerHTML=`<label class="grp-h"><input type="checkbox" data-g="${gi}"> ${g.g} <span style="font-weight:400;color:#5d6b7a">(เลือกทั้งทวีป)</span></label>
+      <div class="grp-items">${g.items.map(([id,n])=>`<label data-t="${(n+' '+id).toLowerCase()}"><input type="checkbox" data-m="${id}"> ${n}</label>`).join('')}</div>`;
+    box.appendChild(d);
+  });
+  box.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.dataset.m){ t.checked?S.sel.add(t.dataset.m):S.sel.delete(t.dataset.m); }
+    else if(t.dataset.g!==undefined){ MARKETS[+t.dataset.g].items.forEach(([id])=>t.checked?S.sel.add(id):S.sel.delete(id)); }
+    syncDropdown();
+  });
+}
+function syncDropdown(){
+  document.querySelectorAll('#ddGroups input[data-m]').forEach(c=>c.checked=S.sel.has(c.dataset.m));
+  document.querySelectorAll('#ddGroups input[data-g]').forEach(c=>{
+    const it=MARKETS[+c.dataset.g].items, n=it.filter(([id])=>S.sel.has(id)).length;
+    c.checked=n===it.length; c.indeterminate=n>0&&n<it.length;
+  });
+  $('ddLabel').textContent=S.sel.size?`เลือกแล้ว ${S.sel.size} ตลาด`:'— คลิกเพื่อเลือกตลาด —';
+  $('chips').innerHTML=[...S.sel].map(id=>`<span class="chip">${MK[id].name}<b data-x="${id}">×</b></span>`).join('');
+}
+$('chips').addEventListener('click',e=>{ if(e.target.dataset.x){S.sel.delete(e.target.dataset.x);syncDropdown();} });
+$('ddBtn').addEventListener('click',()=>$('dd').classList.toggle('open'));
+document.addEventListener('click',e=>{ if(!$('dd').contains(e.target)) $('dd').classList.remove('open'); });
+$('ddSearch').addEventListener('input',e=>{
+  const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#ddGroups .grp').forEach(g=>{
+    let any=false;
+    g.querySelectorAll('label[data-t]').forEach(l=>{const s=!q||l.dataset.t.includes(q); l.style.display=s?'':'none'; any=any||s;});
+    g.style.display=any?'':'none';
+  });
+});
+
+/* ============================== เครือข่าย ============================== */
+class ApiError extends Error{}
+async function rawFetch(url,opt,mode){
+  const u = mode==='proxy' ? $('proxy').value.trim()+encodeURIComponent(url) : url;
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),25000);
+  try{ return await fetch(u,{...opt,signal:ctl.signal}); } finally{ clearTimeout(t); }
+}
+/* ลองเชื่อมตรงก่อน ถ้าโดน CORS/เครือข่ายบล็อกจึงลองผ่าน proxy; จำวิธีที่ใช้ได้ไว้ */
+async function smartFetch(url,opt={},key='tv'){
+  const order = S.transport&&S.transport[key] ? [S.transport[key]] : ['direct','proxy'];
+  let last;
+  for(const mode of order){
+    try{
+      const r=await rawFetch(url,opt,mode);
+      const txt=await r.text();
+      let j=null; try{ j=JSON.parse(txt); }catch(_){}
+      if(j===null){ last=new Error(`ตอบกลับไม่ใช่ JSON (HTTP ${r.status})`); continue; }
+      (S.transport=S.transport||{})[key]=mode;
+      return {ok:r.ok,status:r.status,json:j};
+    }catch(e){ last=e; }
+  }
+  throw new Error('เชื่อมต่อไม่ได้: '+(last&&last.message||last));
+}
+function activeKeys(){ return Object.keys(FIELDS).filter(k=>S.active[k]<FIELDS[k].length); }
+async function fetchMarket(id,n){
+  for(let attempt=0;attempt<25;attempt++){
+    const keys=activeKeys(), cols=keys.map(k=>FIELDS[k][S.active[k]]);
+    const filter=[{left:'type',operation:'equal',right:'stock'},{left:'market_cap_basic',operation:'nempty'}];
+    if(S.usePrimary) filter.push({left:'is_primary',operation:'equal',right:true});
+    const body={columns:cols,filter,options:{lang:'en'},markets:[id],sort:{sortBy:'market_cap_basic',sortOrder:'desc'},range:[0,n]};
+    if(S.usePC) body.price_conversion={to_currency:'usd'};
+    const r=await smartFetch(`https://scanner.tradingview.com/${id}/scan`,{method:'POST',body:JSON.stringify(body)},'tv');
+    const j=r.json;
+    if(r.ok && Array.isArray(j.data)){
+      const rows=j.data.map(it=>{const o={ticker:it.s,market:id}; keys.forEach((k,i)=>o[k]=it.d[i]); return o;});
+      return {rows,total:j.totalCount||rows.length};
+    }
+    /* จัดการข้อผิดพลาด: ชื่อฟิลด์ที่เซิร์ฟเวอร์ไม่รู้จัก → สลับชื่อสำรอง/ตัดออก แล้วลองใหม่ */
+    const msg=String(j.error||j.message||JSON.stringify(j)).slice(0,300);
+    const bad=keys.find(k=>msg.includes('"'+FIELDS[k][S.active[k]]+'"')||msg.includes("'"+FIELDS[k][S.active[k]]+"'")||new RegExp('\\b'+FIELDS[k][S.active[k]].replace('.','\\.')+'\\b').test(msg));
+    if(bad && bad!=='mcap'){ S.active[bad]++; continue; }
+    if(S.usePrimary && /is_primary/.test(msg)){ S.usePrimary=false; continue; }
+    if(S.usePC){ S.usePC=false; continue; }
+    throw new ApiError(`TradingView ตอบกลับข้อผิดพลาด (${r.status}): ${msg}`);
+  }
+  throw new ApiError('ปรับชุดฟิลด์หลายครั้งแล้วยังไม่สำเร็จ');
+}
+const SUBUNIT={GBX:'GBP',GBp:'GBP',ZAC:'ZAR',ZAc:'ZAR',ILA:'ILS',KWF:'KWD'};
+async function ensureFx(){
+  if(S.fx) return S.fx;
+  const r=await smartFetch('https://open.er-api.com/v6/latest/USD',{},'fx');
+  if(!r.json||!r.json.rates) throw new Error('โหลดอัตราแลกเปลี่ยนไม่สำเร็จ');
+  return S.fx=r.json.rates;
+}
+/* ให้ Market Cap เป็น USD: ถ้า TradingView แปลงให้แล้ว (currency = USD) ใช้ได้เลย ไม่เช่นนั้นแปลงด้วยอัตราแลกเปลี่ยน */
+async function toUsd(rows){
+  const curs=[...new Set(rows.map(r=>r.cur).filter(Boolean))];
+  if(!curs.length) return 'unknown';
+  if(curs.every(c=>c==='USD')) return 'tv';
+  const fx=await ensureFx(); let miss=false;
+  rows.forEach(r=>{
+    const c=SUBUNIT[r.cur]||r.cur, rate=c==='USD'?1:fx[c];
+    if(rate&&r.mcap!=null) r.mcap=r.mcap/rate; else if(c!=='USD'){ r.mcap=null; miss=true; }
+  });
+  return miss?'fx-partial':'fx';
+}
+/* World Bank: ใช้ JSONP (ช่องทางทางการของ API ที่ไม่ติด CORS) ก่อน แล้วจึงลอง fetch ตรง และผ่าน proxy
+   ยอมรับเฉพาะคำตอบที่เป็น array ตามรูปแบบของ World Bank เท่านั้น */
+let wbSeq=0;
+function wbJsonp(url){
+  return new Promise((res,rej)=>{
+    const cb='__wbcb'+Date.now()+'_'+(wbSeq++), s=document.createElement('script');
+    const done=(f,v)=>{ clearTimeout(t); delete window[cb]; s.remove(); f(v); };
+    const t=setTimeout(()=>done(rej,new Error('JSONP หมดเวลา')),20000);
+    window[cb]=d=>done(res,d);
+    s.onerror=()=>done(rej,new Error('JSONP โหลดไม่ได้'));
+    s.src=url+'&format=jsonP&prefix='+cb; document.head.appendChild(s);
+  });
+}
+async function wbGet(url){
+  const notes=[];
+  const tries=[['jsonp',()=>wbJsonp(url)],
+    ...['direct','proxy'].map(m=>[m,async()=>{ const r=await rawFetch(url+'&format=json',{},m); const t=await r.text(); try{ return JSON.parse(t); }catch(_){ throw new Error(`HTTP ${r.status}: ${t.slice(0,80)}`); } }])];
+  for(const [name,fn] of tries){
+    try{ const j=await fn(); if(Array.isArray(j)&&j.length) return j; notes.push(`${name}: ได้ ${JSON.stringify(j).slice(0,100)}`); }
+    catch(e){ notes.push(`${name}: ${e.message}`); }
+  }
+  throw new Error(notes.join(' / '));
+}
+async function fetchWB(isos){
+  const out={}; isos.forEach(i=>out[i]={});
+  /* ขอข้อมูลย้อนหลังเป็นช่วงปี แล้วเลือกปีล่าสุดที่มีค่าเอง (ไม่พึ่งพารามิเตอร์ mrnev ของ API) */
+  const y1=new Date().getFullYear(), errs=[]; let hits=0;
+  const put=(d,code,conv)=>{
+    const iso=String(d.countryiso3code||'').toUpperCase();
+    if(d.value==null||!out[iso]) return;
+    const cur=out[iso][code];
+    if(!cur||+d.date>+cur.y){ out[iso][code]={v:conv(+d.value),y:d.date}; hits++; }
+  };
+  const get=async(countries,code,conv)=>{
+    const j=await wbGet(`https://api.worldbank.org/v2/country/${countries}/indicator/${code}?date=${y1-12}:${y1}&per_page=5000`);
+    const m=j[0]&&j[0].message;
+    if(m) throw new Error(m.map(x=>x.value||x.key).join('; '));
+    (j[1]||[]).forEach(d=>put(d,code,conv));   // [meta, null] = ไม่มีข้อมูล ไม่ถือเป็นข้อผิดพลาด
+  };
+  await Promise.all(WB_IND.map(async([code,,conv])=>{
+    try{ await get(isos.join(';'),code,conv); }
+    catch(e){   // ถ้าขอหลายประเทศพร้อมกันไม่ได้ ให้ขอทีละประเทศ
+      const rs=await Promise.allSettled(isos.map(i=>get(i,code,conv)));
+      const bad=rs.find(x=>x.status==='rejected'); if(bad&&rs.every(x=>x.status==='rejected')) errs.push(`${code}: ${bad.reason.message}`);
+    }
+  }));
+  if(!hits) throw new Error(errs.length?errs.join(' | '):'API ตอบกลับสำเร็จแต่ไม่มีค่าสำหรับประเทศที่เลือก');
+  return out;
+}
+
+/* ============================== คำนวณ ============================== */
+const num=v=>typeof v==='number'&&isFinite(v);
+function median(a){ a=a.filter(num).sort((x,y)=>x-y); if(!a.length) return null; const m=a.length>>1; return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+function wAvg(rows,k,nullAsZero){ let s=0,w=0; rows.forEach(r=>{ if(!num(r.mcap)) return; let v=r[k]; if(!num(v)){ if(!nullAsZero) return; v=0; } s+=v*r.mcap; w+=r.mcap; }); return w?s/w:null; }
+function wHarm(rows,k){ let c=0,e=0; rows.forEach(r=>{ if(num(r.mcap)&&num(r[k])&&r[k]>0){ c+=r.mcap; e+=r.mcap/r[k]; } }); return e?c/e:null; }
+function aggregate(id,rows,total){
+  const v=rows.filter(r=>num(r.mcap)&&r.mcap>0), caps=v.map(r=>r.mcap), tot=caps.reduce((a,b)=>a+b,0);
+  const top=v[0]||{};
+  const sectors={}; v.forEach(r=>{const s=r.sector||'ไม่ระบุ'; sectors[s]=(sectors[s]||0)+r.mcap;});
+  return {id,name:MK[id].name,short:MK[id].short,group:MK[id].group,n:v.length,total,
+    mcap:tot/1e9, mcapAvg:v.length?tot/v.length/1e9:null, mcapMed:median(caps)!=null?median(caps)/1e9:null,
+    pe:wHarm(v,'pe'), peMed:median(v.map(r=>r.pe).filter(x=>x>0)), pb:wHarm(v,'pb'), ps:wHarm(v,'ps'),
+    roe:wAvg(v,'roe'), roeMed:median(v.map(r=>r.roe)), roa:wAvg(v,'roa'), roaMed:median(v.map(r=>r.roa)),
+    dy:wAvg(v,'dy',true), dyMed:median(v.map(r=>r.dy)), de:median(v.map(r=>r.de)),
+    nm:median(v.map(r=>r.nm)), om:median(v.map(r=>r.om)), perf:wAvg(v,'perf'),
+    top:top.name?`${top.name} (${top.sym})`:'–', top1share:tot?(top.mcap||0)/tot*100:null, sectors};
+}
+
+/* ============================== ตาราง ============================== */
+const fmt=(v,d=2)=>num(v)?v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';
+const SUM_COLS=[ // key, หัวตาราง, ทศนิยม, ทิศทางที่ "ดี" (1=มากดี, -1=น้อยดี, 0=ไม่ไฮไลต์)
+  ['name','ตลาด'],['group','ทวีป/ภูมิภาค'],['n','จำนวนหุ้นที่วิเคราะห์',0,0],['total','หุ้นทั้งหมดในฐานข้อมูล',0,0],
+  ['mcap','Market Cap รวม (พันล้าน USD)',1,1],['mcapAvg','Market Cap เฉลี่ย/บริษัท (พันล้าน USD)',2,0],['mcapMed','Market Cap มัธยฐาน (พันล้าน USD)',2,0],
+  ['pe','P/E ถ่วงน้ำหนัก (เท่า)',2,-1],['peMed','P/E มัธยฐาน (เท่า)',2,-1],['pb','P/BV (เท่า)',2,-1],['ps','P/S (เท่า)',2,-1],
+  ['roe','ROE ถ่วง (%)',2,1],['roeMed','ROE มัธยฐาน (%)',2,1],['roa','ROA ถ่วง (%)',2,1],['roaMed','ROA มัธยฐาน (%)',2,1],
+  ['dy','Dividend Yield ถ่วง (%)',2,1],['dyMed','Dividend Yield มัธยฐาน (%)',2,1],['de','D/E มัธยฐาน (เท่า)',2,-1],
+  ['nm','Net Margin มัธยฐาน (%)',2,1],['om','Operating Margin มัธยฐาน (%)',2,1],['perf','ผลตอบแทนราคา 1 ปี (%)',2,1],
+  ['top1share','สัดส่วนบริษัทใหญ่สุด (%)',1,0],['top','บริษัทใหญ่ที่สุด']
+];
+const STOCK_COLS=[['sym','สัญลักษณ์'],['name','ชื่อบริษัท'],['sector','กลุ่มอุตสาหกรรม'],['mcapM','Market Cap (ล้าน USD)',0],['pe','P/E',2],['pb','P/BV',2],['ps','P/S',2],['roe','ROE %',2],['roa','ROA %',2],['dy','Div Yield %',2],['de','D/E',2],['nm','Net Margin %',2],['om','Op. Margin %',2],['perf','ราคา 1 ปี %',2]];
+function renderTable(el,cols,rows,sort){
+  const best={};
+  cols.forEach(([k,,d,dir])=>{ if(dir&&rows.length>1){ const vs=rows.map(r=>r[k]).filter(num); if(vs.length>1) best[k]=dir>0?Math.max(...vs):Math.min(...vs); }});
+  if(sort&&sort.k){ rows=[...rows].sort((a,b)=>{const x=a[sort.k],y=b[sort.k]; if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y,'th'):x-y)*sort.dir;}); }
+  el.innerHTML='<thead><tr>'+cols.map(([k,h,d])=>`<th data-k="${k}" class="${d===undefined?'l':''}">${h}${sort&&sort.k===k?(sort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(r=>'<tr>'+cols.map(([k,,d])=>{
+      const v=r[k]; if(d===undefined) return `<td class="l">${v==null?'–':String(v).replace(/</g,'&lt;')}</td>`;
+      const c=(best[k]!==undefined&&v===best[k]?'best ':'')+(num(v)&&v<0?'neg':'');
+      return `<td class="${c}">${fmt(v,d)}</td>`;}).join('')+'</tr>').join('')+'</tbody>';
+}
+function bindSort(el,cols,getRows,st){
+  el.addEventListener('click',e=>{ const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k;
+    st.dir = st.k===k ? -st.dir : (cols.find(c=>c[0]===k)[2]===undefined?1:-1); st.k=k; renderTable(el,cols,getRows(),st); });
+}
+const sortSum={k:'mcap',dir:-1}, sortStk={k:'mcapM',dir:-1};
+const stockRows=()=>{ const r=S.results.find(x=>x.id===$('selStockMkt').value); return r?r.rows.map(x=>({...x,mcapM:num(x.mcap)?x.mcap/1e6:null})):[]; };
+bindSort($('tblSummary'),SUM_COLS,()=>S.results.map(r=>r.agg),sortSum);
+bindSort($('tblStocks'),STOCK_COLS,stockRows,sortStk);
+$('selStockMkt').addEventListener('change',()=>renderTable($('tblStocks'),STOCK_COLS,stockRows(),sortStk));
+
+function renderWB(){
+  const ids=S.results.map(r=>r.id);
+  let h='<thead><tr><th class="l">ตลาด</th>'+WB_IND.map(i=>`<th>${i[1]}</th>`).join('')+'</tr></thead><tbody>';
+  ids.forEach(id=>{ const iso=MK[id].iso, d=iso&&S.wb&&S.wb[iso]||{};
+    h+=`<tr><td class="l">${MK[id].name}</td>`+WB_IND.map(([c,,,dec])=>d[c]?`<td>${fmt(d[c].v,dec)} <span style="color:#5d6b7a">(${d[c].y})</span></td>`:'<td>–</td>').join('')+'</tr>'; });
+  $('tblWB').innerHTML=h+'</tbody>';
+}
+
+/* ============================== ประมวลผล ============================== */
+function setStatus(t,cls=''){ const s=$('status'); s.textContent=t; s.className=cls; }
+function setBar(p){ $('bar').style.display=p==null?'none':'block'; $('bar').firstElementChild.style.width=(p||0)+'%'; }
+async function run(){
+  const ids=[...S.sel];
+  if(!ids.length){ setStatus('กรุณาเลือกตลาดหุ้นอย่างน้อย 1 ตลาด','err'); return; }
+  const n=+$('topN').value;
+  $('btnRun').disabled=true; $('btnCharts').disabled=true; destroyCharts(); $('secCharts').classList.add('hidden');
+  S.results=[]; S.wb=null; S.transport=null; resetFieldState();
+  const fails=[], modes=new Set(); let done=0; setBar(2);
+  const one=async id=>{
+    try{
+      setStatus(`กำลังดึงข้อมูล ${MK[id].name} ... (${done}/${ids.length})`);
+      const {rows,total}=await fetchMarket(id,n);
+      if(!rows.length) throw new Error('ไม่พบข้อมูลหุ้น');
+      modes.add(await toUsd(rows));
+      S.results.push({id,rows,agg:aggregate(id,rows,total)});
+    }catch(e){ fails.push(`${MK[id].name}: ${e.message}`); }
+    done++; setBar(done/ids.length*90);
+  };
+  await one(ids[0]);                                   // ตลาดแรกทำเดี่ยว ๆ เพื่อปรับชุดฟิลด์/ช่องทางเชื่อมต่อให้ลงตัวก่อน
+  for(let i=1;i<ids.length;i+=4) await Promise.all(ids.slice(i,i+4).map(one));
+  S.results.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+  let wbMsg='';
+  if(S.results.length){
+    const isos=S.results.map(r=>MK[r.id].iso).filter(Boolean);
+    if(isos.length){ setStatus('กำลังดึงข้อมูล World Bank ...'); try{ S.wb=await fetchWB(isos); }catch(e){ wbMsg='\n⚠ ดึงข้อมูล World Bank ไม่สำเร็จ: '+e.message; } }
+  }
+  setBar(null); $('btnRun').disabled=false;
+  if(!S.results.length){
+    ['secSummary','secWB','secStocks'].forEach(s=>$(s).classList.add('hidden'));
+    setStatus('✖ ดึงข้อมูลไม่สำเร็จ\n'+fails.join('\n')+'\n\nสาเหตุที่พบบ่อย: เบราว์เซอร์/เครือข่ายบล็อกการเชื่อมต่อข้ามโดเมน (CORS) — ลองเปิดไฟล์ผ่านเว็บเซิร์ฟเวอร์ (เช่น python -m http.server) หรือเปลี่ยน CORS proxy ในส่วนการตั้งค่าด้านล่าง','err');
+    return;
+  }
+  const dropped=Object.keys(FIELDS).filter(k=>S.active[k]>=FIELDS[k].length);
+  const m=[...modes];
+  S.fxMode = m.includes('fx')||m.includes('fx-partial') ? 'แปลง Market Cap เป็น USD ด้วยอัตราแลกเปลี่ยนล่าสุดจาก open.er-api.com (สมมติว่าแหล่งข้อมูลรายงานเป็นสกุลเงินที่ซื้อขาย)' : m.includes('unknown') ? 'ไม่ทราบสกุลเงินของ Market Cap — ตัวเลขอาจเป็นสกุลเงินท้องถิ่น' : 'Market Cap ถูกแปลงเป็น USD โดย TradingView';
+  $('fxNote').innerHTML=`<div class="warnbox">ℹ ${S.fxMode}. หากตัวเลข Market Cap ของตลาดใดดูผิดปกติ โปรดตรวจเทียบกับแหล่งอื่น${dropped.length?' · ฟิลด์ที่แหล่งข้อมูลไม่รองรับ (แสดงเป็น –): '+dropped.join(', '):''}${S.usePrimary?'':' · ไม่สามารถกรองเฉพาะตลาดจดทะเบียนหลักได้ อาจมีหุ้นต่างประเทศที่จดทะเบียนซ้ำปนอยู่'}</div>`;
+  renderTable($('tblSummary'),SUM_COLS,S.results.map(r=>r.agg),sortSum);
+  $('selStockMkt').innerHTML=S.results.map(r=>`<option value="${r.id}">${MK[r.id].name}</option>`).join('');
+  renderTable($('tblStocks'),STOCK_COLS,stockRows(),sortStk);
+  renderWB();
+  $('secSummary').classList.remove('hidden'); $('secStocks').classList.remove('hidden');
+  $('secWB').classList.remove('hidden');
+  if(!S.wb) $('tblWB').innerHTML=`<tbody><tr><td class="l" style="white-space:normal;color:#b3372f">ไม่สามารถแสดงข้อมูล World Bank ได้ — ${wbMsg.replace(/^\n⚠ /,'').replace(/</g,'&lt;')||'ตลาดที่เลือกไม่มีรหัสประเทศในฐานข้อมูล World Bank'}</td></tr></tbody>`;
+  $('btnCharts').disabled=false;
+  setStatus(`✔ ประมวลผลเสร็จ ${S.results.length}/${ids.length} ตลาด — ${new Date().toLocaleString('th-TH')}`+(fails.length?'\n⚠ ไม่สำเร็จ: '+fails.join(' | '):'')+wbMsg, fails.length?'':'ok');
+}
+$('btnRun').addEventListener('click',run);
+
+/* ============================== Excel ============================== */
+$('btnXlsx').addEventListener('click',()=>{
+  if(!window.XLSX){ alert('โหลดไลบรารี Excel ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต'); return; }
+  const wb=XLSX.utils.book_new(), r2=(v,d)=>num(v)?+v.toFixed(d):null;
+  const sum=[SUM_COLS.map(c=>c[1]),...S.results.map(r=>SUM_COLS.map(([k,,d])=>d===undefined?r.agg[k]:r2(r.agg[k],Math.max(d,2))))];
+  sum.push([],['หมายเหตุ: '+S.fxMode],['คำนวณจากหุ้น Market Cap สูงสุด '+$('topN').value+' ตัวต่อตลาด · แหล่งข้อมูล TradingView Screener · ดึงข้อมูลเมื่อ '+new Date().toLocaleString('th-TH')]);
+  const ws1=XLSX.utils.aoa_to_sheet(sum); ws1['!cols']=SUM_COLS.map((c,i)=>({wch:i===0||c[0]==='top'?34:18}));
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+  if(S.wb){
+    const a=[['ตลาด',...WB_IND.flatMap(i=>[i[1],'ปีข้อมูล'])]];
+    S.results.forEach(r=>{ const d=S.wb[MK[r.id].iso]||{}; a.push([MK[r.id].name,...WB_IND.flatMap(([c])=>d[c]?[r2(d[c].v,2),+d[c].y]:[null,null])]); });
+    const ws2=XLSX.utils.aoa_to_sheet(a); ws2['!cols']=a[0].map((_,i)=>({wch:i?22:34}));
+    XLSX.utils.book_append_sheet(wb,ws2,'WorldBank');
+  }
+  const st=[['ตลาด','Ticker',...STOCK_COLS.map(c=>c[1])]];
+  S.results.forEach(r=>r.rows.forEach(x=>st.push([MK[r.id].name,x.ticker,...STOCK_COLS.map(([k,,d])=>k==='mcapM'?r2(x.mcap/1e6,2):d===undefined?(x[k]??null):r2(x[k],2))])));
+  const ws3=XLSX.utils.aoa_to_sheet(st); ws3['!cols']=st[0].map((_,i)=>({wch:i===0||i===3?32:i===4?26:14}));
+  XLSX.utils.book_append_sheet(wb,ws3,'Stocks');
+  XLSX.writeFile(wb,'global_stock_markets_'+new Date().toISOString().slice(0,10)+'.xlsx');
+});
+
+/* ============================== กราฟ ============================== */
+const whiteBg={id:'whiteBg',beforeDraw(c){const x=c.ctx;x.save();x.globalCompositeOperation='destination-over';x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.restore();}};
+function col(i){ return PALETTE[i%PALETTE.length]; }
+function barCfg(labels,datasets,yTitle,dec=2,extra={}){
+  return {type:'bar',data:{labels,datasets},options:{indexAxis:extra.horizontal?'y':'x',scales:{[extra.horizontal?'x':'y']:{title:{display:true,text:yTitle},stacked:!!extra.stacked,max:extra.max,grid:{color:'#eef1f5'}},[extra.horizontal?'y':'x']:{stacked:!!extra.stacked,grid:{display:false}}},
+    plugins:{legend:{display:datasets.length>1,position:'bottom'},datalabels:{anchor:extra.stacked?'center':'end',align:extra.stacked?'center':'end',formatter:v=>num(v)?(extra.stacked&&v<4?'':fmt(v,dec)):'',color:extra.stacked?'#fff':'#1c2733',font:{size:10}}}}};
+}
+function chartDefs(){
+  const A=S.results.map(r=>r.agg), L=A.map(a=>a.short), single=k=>A.map(a=>a[k]);
+  const ds=(label,k,i)=>({label,data:single(k),backgroundColor:col(i),borderRadius:3});
+  const defs=[
+    {id:'mcap',title:'Market Cap รวม (พันล้าน USD)',note:'ขนาดตลาดจากหุ้นที่นำมาวิเคราะห์',cfg:()=>{const c=barCfg(L,[{label:'Market Cap',data:single('mcap'),backgroundColor:A.map((_,i)=>col(i)),borderRadius:3}],'พันล้าน USD',0);c.options.plugins.legend.display=false;return c;}},
+    {id:'share',title:'สัดส่วน Market Cap ระหว่างตลาดที่เลือก',note:'กราฟโดนัทแสดงส่วนแบ่งของแต่ละตลาด',cfg:()=>({type:'doughnut',data:{labels:L,datasets:[{data:single('mcap'),backgroundColor:A.map((_,i)=>col(i)),borderColor:'#fff',borderWidth:2}]},options:{plugins:{legend:{position:'right'},datalabels:{color:'#fff',font:{weight:'bold',size:11},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+(b||0),0);const p=v/t*100;return p>=3?p.toFixed(1)+'%':'';}}}}})},
+    {id:'pe',title:'P/E: ถ่วงน้ำหนัก เทียบ มัธยฐาน (เท่า)',note:'ค่าต่ำ = ราคาถูกเมื่อเทียบกับกำไร',cfg:()=>barCfg(L,[ds('P/E ถ่วงน้ำหนัก','pe',0),ds('P/E มัธยฐาน','peMed',1)],'เท่า',1)},
+    {id:'pbps',title:'P/BV และ P/S (เท่า)',note:'ราคาเทียบมูลค่าทางบัญชีและยอดขาย',cfg:()=>barCfg(L,[ds('P/BV','pb',2),ds('P/S','ps',4)],'เท่า',2)},
+    {id:'roeroa',title:'ROE และ ROA (%, ถ่วงน้ำหนัก)',note:'ความสามารถในการทำกำไรต่อทุนและต่อสินทรัพย์',cfg:()=>barCfg(L,[ds('ROE','roe',0),ds('ROA','roa',2)],'%',1)},
+    {id:'dy',title:'Dividend Yield (%)',note:'อัตราเงินปันผลตอบแทน: ถ่วงน้ำหนักเทียบมัธยฐาน',cfg:()=>barCfg(L,[ds('ถ่วงน้ำหนัก','dy',5),ds('มัธยฐาน','dyMed',10)],'%',2)},
+    {id:'margin',title:'อัตรากำไร (%, มัธยฐาน)',note:'Net Margin และ Operating Margin ของบริษัทในตลาด',cfg:()=>barCfg(L,[ds('Net Margin','nm',7),ds('Operating Margin','om',1)],'%',1)},
+    {id:'perf',title:'ผลตอบแทนราคา 1 ปี (%, ถ่วงน้ำหนัก)',note:'สีเขียว = บวก, สีแดง = ลบ',cfg:()=>{const c=barCfg(L,[{label:'1 ปี',data:single('perf'),backgroundColor:single('perf').map(v=>v>=0?'#2f8f5b':'#b3372f'),borderRadius:3}],'%',1);c.options.plugins.legend.display=false;return c;}},
+    {id:'bubble',title:'P/E เทียบ ROE (ขนาดฟอง = Market Cap)',note:'มุมขวาล่าง = ROE สูงแต่ P/E ต่ำ (คุณภาพดี ราคาไม่แพง)',cfg:()=>{const mx=Math.max(...A.map(a=>a.mcap||0))||1;return {type:'bubble',data:{datasets:A.filter(a=>num(a.pe)&&num(a.roe)).map((a,i)=>({label:a.short,data:[{x:a.roe,y:a.pe,r:6+28*Math.sqrt(a.mcap/mx)}],backgroundColor:col(A.indexOf(a))+'aa',borderColor:col(A.indexOf(a))}))},options:{scales:{x:{title:{display:true,text:'ROE ถ่วงน้ำหนัก (%)'}},y:{title:{display:true,text:'P/E ถ่วงน้ำหนัก (เท่า)'}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ROE ${fmt(c.raw.x,1)}%, P/E ${fmt(c.raw.y,1)}`}},datalabels:{formatter:(v,c)=>c.dataset.label,color:'#1c2733',font:{size:10},anchor:'end',align:'top'}}}};}},
+    {id:'radar',title:'โปรไฟล์ตลาด (ดัชนี: ค่าสูงสุดในกลุ่ม = 100)',note:'เทียบรูปร่างของแต่ละตลาดใน 6 มิติ ค่าติดลบแสดงเป็น 0',cfg:()=>{const ks=[['pe','P/E'],['pb','P/BV'],['roe','ROE'],['roa','ROA'],['dy','Div Yield'],['nm','Net Margin']];const mx=ks.map(([k])=>Math.max(...A.map(a=>num(a[k])?a[k]:0))||1);return {type:'radar',data:{labels:ks.map(k=>k[1]),datasets:A.map((a,i)=>({label:a.short,data:ks.map(([k],j)=>num(a[k])?Math.max(0,a[k]/mx[j]*100):0),borderColor:col(i),backgroundColor:col(i)+'22',pointBackgroundColor:col(i),borderWidth:2}))},options:{scales:{r:{min:0,max:100,ticks:{stepSize:25,backdropColor:'transparent'}}},plugins:{legend:{position:'bottom'},datalabels:{formatter:v=>v.toFixed(0),font:{size:9},color:c=>c.dataset.borderColor,align:'end',offset:2}}}};}},
+    {id:'sector',title:'โครงสร้างกลุ่มอุตสาหกรรม (% ของ Market Cap)',note:'สัดส่วนมูลค่าตลาดแยกตามกลุ่มอุตสาหกรรม (ชื่อกลุ่มตามแหล่งข้อมูล)',cfg:()=>{const tot={};A.forEach(a=>Object.entries(a.sectors).forEach(([s,v])=>tot[s]=(tot[s]||0)+v/(a.mcap*1e9)));const secs=Object.keys(tot).sort((x,y)=>tot[y]-tot[x]);return barCfg(L,secs.map((s,i)=>({label:s,data:A.map(a=>(a.sectors[s]||0)/(a.mcap*1e9)*100),backgroundColor:`hsl(${(i*47)%360} 55% ${42+(i%3)*8}%)`})),'% ของ Market Cap',0,{stacked:true,max:100,horizontal:true});}},
+    {id:'top',title:'15 บริษัทที่ใหญ่ที่สุดในตลาดที่เลือก (พันล้าน USD)',note:'สีแท่งตามตลาดที่จดทะเบียน',cfg:()=>{const all=S.results.flatMap((r,i)=>r.rows.filter(x=>num(x.mcap)).map(x=>({n:`${x.name||x.sym} · ${MK[r.id].short}`,v:x.mcap/1e9,c:col(i)}))).sort((a,b)=>b.v-a.v).slice(0,15);const c=barCfg(all.map(x=>x.n.length>42?x.n.slice(0,40)+'…':x.n),[{label:'Market Cap',data:all.map(x=>x.v),backgroundColor:all.map(x=>x.c),borderRadius:3}],'พันล้าน USD',0,{horizontal:true});c.options.plugins.legend.display=false;return c;}}
+  ];
+  if(S.wb){ const wv=A.map(a=>{const d=S.wb[MK[a.id].iso];return d&&d['CM.MKT.LCAP.GD.ZS']?d['CM.MKT.LCAP.GD.ZS'].v:null;});
+    if(wv.some(num)) defs.push({id:'wbgdp',title:'Market Cap เทียบ GDP (%, World Bank)',note:'ขนาดตลาดหุ้นเทียบขนาดเศรษฐกิจ ปีล่าสุดที่มีข้อมูลของแต่ละประเทศ',cfg:()=>{const c=barCfg(L,[{label:'% ของ GDP',data:wv,backgroundColor:A.map((_,i)=>col(i)),borderRadius:3}],'% ของ GDP',0);c.options.plugins.legend.display=false;return c;}}); }
+  return defs;
+}
+function destroyCharts(){ Object.values(S.charts).forEach(c=>c.destroy()); S.charts={}; $('charts').innerHTML=''; }
+function renderCharts(){
+  if(!window.Chart){ setStatus('โหลดไลบรารีกราฟไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต','err'); return; }
+  destroyCharts();
+  if(window.ChartDataLabels) Chart.register(ChartDataLabels);
+  Chart.defaults.font.family=getComputedStyle(document.body).fontFamily; Chart.defaults.color='#1c2733';
+  chartDefs().forEach(d=>{
+    const card=document.createElement('div'); card.className='cc';
+    card.innerHTML=`<div class="cc-h"><h3>${d.title}</h3><div class="cc-tools"><label><input type="checkbox" data-lab="${d.id}"> แสดงตัวเลข</label><button class="b-sec b-sm" data-png="${d.id}">⬇ PNG</button></div></div><div class="cc-box"><canvas></canvas></div><p>${d.note}</p>`;
+    $('charts').appendChild(card);
+    const cfg=d.cfg(); cfg.options=cfg.options||{}; cfg.options.responsive=true; cfg.options.maintainAspectRatio=false;
+    cfg.options.layout={padding:{top:18,right:14}};
+    cfg.options.plugins=cfg.options.plugins||{}; cfg.options.plugins.datalabels={...(cfg.options.plugins.datalabels||{}),display:false};
+    cfg.options.plugins.title={display:true,text:d.title,font:{size:14},padding:{bottom:10}};
+    cfg.plugins=[whiteBg];
+    S.charts[d.id]=new Chart(card.querySelector('canvas'),cfg);
+  });
+  $('secCharts').classList.remove('hidden'); $('secCharts').scrollIntoView({behavior:'smooth'});
+}
+$('btnCharts').addEventListener('click',renderCharts);
+$('charts').addEventListener('change',e=>{ const id=e.target.dataset.lab; if(!id) return; const c=S.charts[id]; c.options.plugins.datalabels.display=e.target.checked; c.update(); });
+$('charts').addEventListener('click',e=>{ const id=e.target.dataset.png; if(!id) return; const a=document.createElement('a'); a.href=S.charts[id].toBase64Image('image/png',1); a.download=`chart_${id}_${new Date().toISOString().slice(0,10)}.png`; a.click(); });
+
+/* ============================== Reset ============================== */
+$('btnReset').addEventListener('click',()=>{
+  S.sel.clear(); S.results=[]; S.wb=null; S.fx=null; S.transport=null; resetFieldState(); destroyCharts();
+  ['secSummary','secWB','secStocks','secCharts'].forEach(s=>$(s).classList.add('hidden'));
+  ['tblSummary','tblWB','tblStocks'].forEach(t=>$(t).innerHTML='');
+  $('topN').value='100'; $('ddSearch').value=''; $('ddSearch').dispatchEvent(new Event('input'));
+  $('proxy').value='https://corsproxy.io/?url='; $('btnCharts').disabled=true; $('btnRun').disabled=false;
+  $('dd').classList.remove('open'); setBar(null); setStatus(''); syncDropdown(); window.scrollTo({top:0,behavior:'smooth'});
+});
+
+buildDropdown(); syncDropdown();
+</script>
+</body>
+</html>
